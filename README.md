@@ -22,7 +22,7 @@ DSH 的 Agnes-2.5-Flash 模型虽然支持图片理解，但有以下限制：
 ## 🔧 实现方式
 
 ### 核心技术
-- **Agnes-2.5-Flash** - DeepSeek 提供的免费文本模型（支持网络图片）
+- **Agnes-2.5-Flash** - Agnes AI 提供的免费文本模型（支持网络图片）
 - **百度 PaddleOCR VL 1.6** - 免费 OCR API（支持本地文件 + URL）
 - **DSH Cordis 插件系统** - 使用官方 API 注册工具和模型变体
 
