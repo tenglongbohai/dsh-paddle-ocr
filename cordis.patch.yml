@@ -1,0 +1,4 @@
+# dsh-paddle-ocr bundle patch
+- insert:
+    - id: dsh-paddle-ocr
+      name: 'dsh-paddle-ocr'
