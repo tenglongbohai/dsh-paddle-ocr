@@ -1,20 +1,23 @@
 # dsh-paddle-ocr
 
-DSH 插件：为 Agnes-2.5-Flash 添加本地图片 OCR 识别能力
+DSH 插件：为纯文本模型添加 PaddleOCR 视觉识别能力
 
 ## 🎯 解决的问题
 
 ### 问题背景
-DSH 的 Agnes-2.5-Flash 模型虽然支持图片理解，但有以下限制：
-- ❌ 只能处理网络图片（URL），无法直接识别本地截图
-- ❌ 用户上传的本地图片无法被模型理解
-- ❌ 截图、本地文档扫描等场景无法使用
+许多 LLM 提供商的文本模型不支持图片输入，导致用户在 DSH 中无法使用图片功能：
+- ❌ Agnes-2.5-Flash 仅支持网络图片 URL，无法处理本地截图
+- ❌ DeepSeek-V4 系列官方声明为纯文本模型
+- ❌ MiniMax-M2.x 系列不支持图片输入
+- ❌ GLM 纯文本模型（不带 V）不支持图片输入
+- ❌ Mimo-v2.5-pro 是纯文本模型，不支持图片
 
 ### 解决方案
-本插件通过 PaddleOCR VL 1.6 为 DSH 添加本地图片 OCR 能力：
+本插件通过 PaddleOCR VL 1.6 为纯文本模型添加视觉能力：
 - ✅ **本地文件支持** - 用户上传的截图可直接识别
 - ✅ **网络图片支持** - URL 图片也可识别
-- ✅ **高精度文字识别** - 专门针对文字优化
+- ✅ **多提供商支持** - Agnes, DeepSeek, MiniMax, GLM, Mimo
+- ✅ **智能检测** - 自动跳过多模态模型（如 GLM-4V, MiniMax-M3, Mimo-v2.5）
 - ✅ **完全免费** - Agnes 免费 + PaddleOCR 每日 20,000 页免费额度
 
 ---
@@ -22,18 +25,18 @@ DSH 的 Agnes-2.5-Flash 模型虽然支持图片理解，但有以下限制：
 ## 🔧 实现方式
 
 ### 核心技术
-- **Agnes-2.5-Flash** - Agnes AI 提供的免费文本模型（支持网络图片）
-- **百度 PaddleOCR VL 1.6** - 免费 OCR API（支持本地文件 + URL）
+- **PaddleOCR VL 1.6** - 百度飞桨视觉语言模型
 - **DSH Cordis 插件系统** - 使用官方 API 注册工具和模型变体
+- **智能检测** - 自动判断模型是否已支持图片
 
 ### 工作流程
 ```
 用户上传图片（本地或 URL）
     ↓
-插件检测图片类型
+插件检测模型类型
     ↓
-本地文件 → 上传到 PaddleOCR API → OCR 识别
-网络图片 → 直接使用 Agnes 原生能力
+纯文本模型 → 调用 PaddleOCR → OCR 识别
+多模态模型 → 跳过（已有视觉能力）
     ↓
 返回文字内容
     ↓
@@ -41,11 +44,12 @@ DSH 的 Agnes-2.5-Flash 模型虽然支持图片理解，但有以下限制：
 ```
 
 ### 关键特性
-- ✅ **本地文件支持** - 支持 PNG, JPEG, PDF, Word, Excel
-- ✅ **网络图片支持** - 支持 HTTP/HTTPS URL
+- ✅ **多提供商支持** - 自动适配 Agnes, DeepSeek, MiniMax, GLM, Mimo
+- ✅ **智能过滤** - 自动跳过多模态模型（GLM-4V/5V, MiniMax-M3, Mimo-v2.5 等）
+- ✅ **本地文件支持** - PNG, JPEG, PDF, Word, Excel
+- ✅ **网络图片支持** - HTTP/HTTPS URL
 - ✅ **高精度识别** - 中文、英文、表格、公式
 - ✅ **坐标定位** - 返回文字位置信息
-- ✅ **完全免费** - 无额外费用
 
 ---
 
@@ -134,7 +138,7 @@ await tools.paddle_ocr({
 
 ### 方式 2：视觉模型变体
 1. 刷新 DSH 网页
-2. 在模型选择中找到 `agnes-2.5-flash (PaddleOCR)`
+2. 在模型选择中找到 `模型名 (PaddleOCR)` 变体
 3. 上传图片，自动识别并回答问题
 
 ### 返回格式
@@ -155,7 +159,43 @@ await tools.paddle_ocr({
 
 ---
 
-## 📋 API 说明
+## 📋 支持的模型
+
+### ✅ 支持（纯文本模型，会创建视觉变体）
+| 提供商 | 模型 | 说明 |
+|--------|------|------|
+| **Agnes** | 2.5-Flash | 免费文本模型 |
+| **DeepSeek** | V4, V4-Pro, V4-Flash | 官方声明为纯文本 |
+| **MiniMax** | M2.7, M2.5, M2.1, M2 | 纯文本版本 |
+| **GLM** | GLM-5.x, GLM-4.x（不带V） | 纯文本版本 |
+| **Mimo** | v2.5-pro | 纯文本版本 |
+
+### ❌ 自动跳过（已支持图片的多模态模型）
+| 提供商 | 模型 | 原因 |
+|--------|------|------|
+| **MiniMax** | M3 | 已是多模态模型 |
+| **GLM** | GLM-4V, GLM-5V 系列 | 名称带 V，已是多模态 |
+| **Mimo** | v2.5 | 已是多模态模型 |
+| **DeepSeek** | V4.5（如有） | 如支持图片则跳过 |
+
+---
+
+## 📝 GLM 模型识别规则
+
+根据智谱 AI 官方文档，GLM 模型命名规则非常清晰：
+
+| 规则 | 类型 | 示例 | 插件行为 |
+|------|------|------|----------|
+| **不带 V** | 纯文本 | GLM-4-Flash, GLM-5.3 | ✅ 创建视觉变体 |
+| **带 V** | 多模态 | GLM-4V-Flash, GLM-5V-Turbo | ❌ 自动跳过 |
+
+**一眼区分法：**
+- 名称中有 `V` → 视觉模型（多模态）
+- 名称中无 `V` → 文本模型（纯文本）
+
+---
+
+## 📝 API 说明
 
 ### paddle_ocr 工具
 
@@ -183,19 +223,20 @@ await tools.paddle_ocr({
 ### 场景 1：本地截图识别
 - 用户上传本地截图
 - PaddleOCR 识别文字内容
-- Agnes 基于文字回答问题
-- **解决 Agnes 不支持本地文件的限制**
+- Agnes/DeepSeek/GLM 等基于文字回答问题
+- **解决纯文本模型不支持本地文件的限制**
 
-### 场景 2：文档处理
+### 场景 2：批量文档处理
 - 上传 PDF/Word/Excel 文档
 - 自动识别文字内容
 - 基于内容进行问答
-- **节省付费模型调用成本**
+- **节省付费多模态模型调用成本**
 
-### 场景 3：批量处理
-- 每日 20,000 页次免费额度
-- 适合个人和小团队使用
-- 可配合 Cron 任务自动处理
+### 场景 3：多模型适配
+- 插件自动检测所有配置的提供商
+- 纯文本模型自动创建视觉变体
+- 多模态模型自动跳过
+- **无需手动配置每个模型**
 
 ---
 
@@ -221,26 +262,33 @@ node --check lib/index.js
 pnpm test
 ```
 
-### 贡献指南
-1. Fork 项目
-2. 创建特性分支
-3. 提交更改
-4. 推送分支
-5. 创建 Pull Request
+### 添加新提供商
+在 `lib/index.js` 的 `providers` 数组中添加：
+```javascript
+const providers = [
+  'agnes-ai',
+  'deepseek',
+  'minimax',
+  'glm',
+  'mimo',
+  'your-provider'  // 添加新的提供商
+];
+```
 
 ---
 
 ## 🎉 总结
 
-**本插件弥补了 Agnes-2.5-Flash 只能处理网络图片的限制，让 DSH 用户能够：**
-- ✅ 识别本地截图
-- ✅ 处理本地文档
-- ✅ 享受完全免费的 OCR 服务
-- ✅ 获得高精度的文字识别能力
+**本插件为纯文本 LLM 添加 PaddleOCR 视觉能力，让 DSH 用户能够：**
+- ✅ 识别本地截图和文档
+- ✅ 使用免费模型获得视觉体验
+- ✅ 自动适配多个提供商
+- ✅ 智能跳过已支持图片的模型
 
 **技术栈：**
-- Agnes-2.5-Flash：免费文本模型（支持网络图片）
 - PaddleOCR VL 1.6：免费 OCR API（支持本地 + 网络）
+- DSH Cordis：官方插件系统
+- 智能检测：自动适配纯文本/多模态模型
 
 ---
 
@@ -252,5 +300,5 @@ MIT License
 
 - [DSH 官方文档](https://github.com/deepseek-ai/dsh)
 - [百度 PaddleOCR API](https://aistudio.baidu.com/paddleocr) - 免费申请
-- [Agnes AI](https://agnes-ai.cn) - 免费模型
+- [智谱 AI 模型文档](https://docs.bigmodel.cn) - GLM 模型分类
 - [modlens 参考实现](https://github.com/liustack/modlens)

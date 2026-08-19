@@ -1,7 +1,7 @@
 {
   "name": "dsh-paddle-ocr",
   "version": "1.0.0",
-  "description": "DSH plugin for PaddleOCR VL image recognition",
+  "description": "DSH DeepSeek Harness plugin: Add PaddleOCR vision to text-only LLMs (Agnes, DeepSeek, MiniMax, GLM, Mimo). 为DeepSeek Harness纯文本模型添加图片识别能力，支持本地截图和文档OCR。",
   "type": "module",
   "main": "lib/index.js",
   "exports": {
